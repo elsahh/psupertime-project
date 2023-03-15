@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn import linear_model
 from scipy.stats import kendalltau
 from matplotlib import pyplot as plt
+from sklearn.model_selection import KFold
 
 
 def lm(X, y):
@@ -32,6 +33,28 @@ def lm(X, y):
         plt.ylabel("Age [Yr]")
         plt.show()
         # print(classifier.alphas_)
+
+
+def cross_validation(X, y):
+    results = []
+    kf = KFold(n_splits=6, shuffle=True)
+    alphas = np.logspace(-11, -4, 8)
+    for alpha in alphas:
+        for i, (train_index, test_index) in enumerate(kf.split(X)):
+            classifier = linear_model.Lasso(alpha=alpha)
+            classifier.fit(X[train_index], y[train_index])
+            y_predicted = classifier.predict(X[test_index])
+            f, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
+            f.suptitle(f"alpha: {alpha}")
+
+            ax.scatter(y_predicted, y[test_index])
+            ax.set_ylabel("Age", fontdict={"size": 18, "weight": "bold"})
+            ax.set_xlabel("Predicted Age", fontdict={"size": 18, "weight": "bold"})
+            ktau = kendalltau(y_predicted, y[test_index])
+            results.append({"Fold": i, "alpha": alpha, "KTau": ktau})
+            plt.show()
+    df = pd.DataFrame(results, columns=["Fold", "alpha", "KTau"])
+    print(df.sort_values(by="alpha"))
 
 
 def xy_fromdf(df):
@@ -64,7 +87,9 @@ if __name__ == "__main__":
     X, y = xy_fromdf(df=joined_df)
 
     # linear regression
-    lm(X, y)
+    # lm(X, y)
+
+    cross_validation(X, y)
 
     # lasso = linear_model.Lasso(random_state=0, max_iter=10000)
     # alphas = np.logspace(-4, -0.5, 30)

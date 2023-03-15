@@ -1,33 +1,37 @@
 import path
 import pandas as pd
-from sklearn.model_selection import train_test_split
+import numpy as np
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn import linear_model
 from scipy.stats import kendalltau
 from matplotlib import pyplot as plt
 
 
 def lm(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=42)
 
     models = {
-        linear_model.LinearRegression: {},
-        linear_model.LassoCV: {},
-        # linear_model.Lasso: {"alpha": 0.00005},
+        # linear_model.LinearRegression: {},
+        # linear_model.LassoCV: {"tol": 0.01},
+        # linear_model.Lasso: {"alpha": 0.0001, "tol": 0.01},
+        linear_model.RidgeCV: {},
     }
 
     for model, args in models.items():
 
-        clf = model(**args)
-        clf.fit(X_train, y_train)
+        classifier = model(**args)
+        classifier.fit(X_train, y_train)
 
-        y_predicted = clf.predict(X_test)
-        print(y_predicted)
+        y_predicted = classifier.predict(X_test)
+        # print(y_predicted)
 
         ktau = kendalltau(y_predicted, y_test)
         print(ktau)
         plt.plot(y_predicted, y_test, linestyle="", marker="s")
+        plt.xlabel("Predicted Age [Yr]")
+        plt.ylabel("Age [Yr]")
         plt.show()
-        # print(clf.alphas_)
+        # print(classifier.alphas_)
 
 
 def xy_fromdf(df):
@@ -61,3 +65,31 @@ if __name__ == "__main__":
 
     # linear regression
     lm(X, y)
+
+    # lasso = linear_model.Lasso(random_state=0, max_iter=10000)
+    # alphas = np.logspace(-4, -0.5, 30)
+    #
+    # tuned_parameters = [{"alpha": alphas}]
+    # n_folds = 5
+    #
+    # clf = GridSearchCV(lasso, tuned_parameters, cv=n_folds, refit=False)
+    # clf.fit(X, y)
+    # scores = clf.cv_results_["mean_test_score"]
+    # scores_std = clf.cv_results_["std_test_score"]
+    #
+    # plt.figure().set_size_inches(8, 6)
+    # plt.semilogx(alphas, scores)
+    #
+    # std_error = scores_std / np.sqrt(n_folds)
+    #
+    # plt.semilogx(alphas, scores + std_error, "b--")
+    # plt.semilogx(alphas, scores - std_error, "b--")
+    #
+    # # alpha=0.2 controls the translucency of the fill color
+    # plt.fill_between(alphas, scores + std_error, scores - std_error, alpha=0.2)
+    #
+    # plt.ylabel("CV score +/- std error")
+    # plt.xlabel("alpha")
+    # plt.axhline(np.max(scores), linestyle="--", color=".5")
+    # plt.xlim([alphas[0], alphas[-1]])
+    # plt.show()

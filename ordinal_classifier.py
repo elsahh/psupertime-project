@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # get X (features), and y (target labels) from df
     X, y = xy_fromdf(df=joined_df)
 
-    clf = LogisticRegression(penalty=None, max_iter=5000)
+    clf = LogisticRegression(penalty="l1", max_iter=5000, solver='liblinear', C=10000)
     ordinal_clf = OrdinalClassifier(clf=clf)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
@@ -92,3 +92,7 @@ if __name__ == "__main__":
     ktau = kendalltau(y_predicted, y_test)
     print(y_predicted, y_test)
     print(ktau)
+
+    label_map = {
+
+    }

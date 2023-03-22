@@ -14,6 +14,17 @@ Project for completion of the module "Systems Biology: Computational Analysis an
   
 - ordinal logistic regression
   
-- make figures
+- make figure
 
 - write paper
+
+## Ideas
+- Differences between categorical and continuous timelabels.
+  + pros & cons
+- Logistic vs Linear: Linear model forces linearity on data, logistic is more flexible??
+- discuss unique solutions
+- Our code, specifically how we do ordinal logistic regression
+- complain about R package installation
+
+## Figures
+- 

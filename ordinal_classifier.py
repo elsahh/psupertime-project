@@ -1,15 +1,5 @@
-from scipy.stats import kendalltau
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.base import clone, BaseEstimator, ClassifierMixin
-from sklearn.utils.validation import check_X_y, check_is_fitted, check_array
-from sklearn.utils.multiclass import check_classification_targets
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
 import numpy as np
-import pandas as pd
-
-from linear import PSUPERTIME_PATH, xy_fromdf
 
 
 class OrdinalClassifier(BaseEstimator, ClassifierMixin):
@@ -26,7 +16,6 @@ class OrdinalClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         self.uniques_class = np.sort(np.unique(y))
-        print(self.uniques_class)
         assert self.uniques_class.shape[
                    0] >= 3, f'OrdinalClassifier needs at least 3 classes, only {self.uniques_class.shape[0]} found'
 
@@ -55,44 +44,3 @@ class OrdinalClassifier(BaseEstimator, ClassifierMixin):
         self.clf.set_params(**params)
         for _, clf in self.clfs.items():
             clf.set_params(**params)
-
-
-if __name__ == "__main__":
-    # paths to data
-    genes_path = PSUPERTIME_PATH / "variable_genes.csv"
-    ages_path = PSUPERTIME_PATH / "Ages.csv"
-
-    # import data
-    genes_df = pd.read_csv(genes_path, index_col=False, sep=",")
-    ages_df = pd.read_csv(ages_path, index_col=False, sep=",")
-
-    # set df-index to sample-labels
-    ages_df = ages_df.set_index("Accession")
-
-    genes_df = genes_df.rename(columns={"Unnamed: 0": "Accession"})
-    genes_df = genes_df.set_index("Accession")
-
-    # merge dfs, ensures correct ordering of X and y
-    joined_df = genes_df.join(ages_df)
-    print("There are", joined_df.isna().sum().sum(), "NaNs in the data")
-
-    # get X (features), and y (target labels) from df
-    X, y = xy_fromdf(df=joined_df)
-
-    clf = LogisticRegression(penalty="l1", max_iter=5000, solver='liblinear', C=10000)
-    ordinal_clf = OrdinalClassifier(clf=clf)
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
-
-    ordinal_clf.fit(X=X_train, y=y_train)
-
-    y_predicted = ordinal_clf.predict(X_test)
-    # print(y_predicted)
-
-    ktau = kendalltau(y_predicted, y_test)
-    print(y_predicted, y_test)
-    print(ktau)
-
-    label_map = {
-
-    }

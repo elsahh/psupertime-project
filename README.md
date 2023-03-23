@@ -21,10 +21,12 @@ Project for completion of the module "Systems Biology: Computational Analysis an
 ## Ideas
 - Differences between categorical and continuous timelabels.
   + pros & cons
+  + it seems for pseudotime, or time in general, categorizing doesn't make any sense
 - Logistic vs Linear: Linear model forces linearity on data, logistic is more flexible??
 - discuss unique solutions
 - Our code, specifically how we do ordinal logistic regression
 - complain about R package installation
+- differences between our code and the actual psupertime code
 
 ## Figures
 - 

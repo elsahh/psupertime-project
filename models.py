@@ -112,7 +112,7 @@ def crossvalidation_noreg(X, y, n_folds):
 
 
 def figure(results_noreg, results_l1):
-    print(results_noreg, results_l1)
+    print(results_noreg, "\n", results_l1)
 
     # mean, sd of noreg results
     noreg_by_model = results_noreg.groupby("Model")
@@ -123,8 +123,6 @@ def figure(results_noreg, results_l1):
     linear_sd = noreg_sds["KTau"]["linear"]
     ordinal_mean = noreg_means["KTau"]["ordinal"]
     ordinal_sd = noreg_sds["KTau"]["ordinal"]
-
-    print(noreg_means, noreg_sds)
 
     f, (ax_linear, ax_ordlog) = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 
@@ -160,11 +158,30 @@ def figure(results_noreg, results_l1):
     )
 
     # plot alpha scan
-    # ax_linear.errorbar(mean['alpha'], mean['KTau'], yerr=sd['KTau'], label='Lasso Regression $\pm$ SD')
-    # ax_linear.errorbar(mean['alpha'], mean['KTau'], yerr=sd['KTau'], label='Lasso Regression $\pm$ SD')
+    print(results_l1)
+    for model, ax in zip(["ordinall1", "linearl1"], [ax_ordlog, ax_linear]):
+        results_model = results_l1[results_l1.Model == model]
+        by_alpha = results_model.groupby("Alpha")
+        means = by_alpha.mean().reset_index()
+        sds = by_alpha.std().reset_index()
+        print(means, sds)
+        ax.errorbar(
+            x=means['Alpha'],
+            y=means['KTau'],
+            yerr=sds['KTau'],
+            label='L1 regularized (Mean $\pm$ SD)'
+        )
+
+    # get x limits
+    min_alpha = results_l1["Alpha"].min()
+    max_alpha = results_l1["Alpha"].max()
+
+    x_min = min_alpha - min_alpha / 2
+    x_max = max_alpha + max_alpha / 2
 
     for ax in [ax_linear, ax_ordlog]:
         ax.set_xscale('log')
+        ax.set_xlim(x_min, x_max)
         ax.set_ylim(0, 1)
         ax.set_ylabel("Kendall's Tau [-]")
         ax.set_xlabel('Alpha [-]')
@@ -178,7 +195,7 @@ if __name__ == '__main__':
     features, labels = data()
 
     # params for cv
-    alphas = np.logspace(-7, -3, 10)
+    alphas = np.logspace(-7, -1, 10)
     n_folds = 5
 
     # cv of l1 regularized models

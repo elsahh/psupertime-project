@@ -111,7 +111,7 @@ def crossvalidation_noreg(X, y, n_folds):
     return results_df
 
 
-def figure(results_noreg, results_l1):
+def figure(title, results_noreg, results_l1):
     print(results_noreg, "\n", results_l1)
 
     # mean, sd of noreg results
@@ -124,7 +124,7 @@ def figure(results_noreg, results_l1):
     ordinal_mean = noreg_means["KTau"]["ordinal"]
     ordinal_sd = noreg_sds["KTau"]["ordinal"]
 
-    f, (ax_linear, ax_ordlog) = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
+    f, (ax_linear, ax_ordlog) = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 
     # plot red reference values
     ax_linear.axhline(
@@ -169,7 +169,14 @@ def figure(results_noreg, results_l1):
             x=means['Alpha'],
             y=means['KTau'],
             yerr=sds['KTau'],
-            label='L1 regularized (Mean $\pm$ SD)'
+            label='L1 regularized (Mean $\pm$ SD)',
+            mfc='tab:blue',
+            mec='black',
+            capsize=2,
+            ecolor='black',
+            marker='s',
+            markersize=3,
+            color='black'
         )
 
     # get x limits
@@ -184,8 +191,9 @@ def figure(results_noreg, results_l1):
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(0, 1)
         ax.set_ylabel("Kendall's Tau [-]")
-        ax.set_xlabel('Alpha [-]')
+        ax.set_xlabel('alpha [-]')
         ax.legend()
+    plt.savefig(f"{title}.svg", dpi=300)
     plt.show()
 
 
@@ -195,22 +203,26 @@ if __name__ == '__main__':
     features, labels = data()
 
     # params for cv
-    alphas = np.logspace(-7, -1, 10)
     n_folds = 5
+    alphass = {
+        "Fig1": np.logspace(-7, -1, 10),
+        "Fig2": np.logspace(-5, -4, 10)
+    }
 
-    # cv of l1 regularized models
-    results_l1 = cross_validation_l1(
-        X=features,
-        y=labels,
-        alphas=alphas,
-        n_folds=n_folds,
-    )
+    for title, alphas in alphass.items():
+        # cv of l1 regularized models
+        results_l1 = cross_validation_l1(
+            X=features,
+            y=labels,
+            alphas=alphas,
+            n_folds=n_folds,
+        )
 
-    # cv of not-regularized models
-    results_noreg = crossvalidation_noreg(
-        X=features,
-        y=labels,
-        n_folds=n_folds,
-    )
+        # cv of not-regularized models
+        results_noreg = crossvalidation_noreg(
+            X=features,
+            y=labels,
+            n_folds=n_folds,
+        )
 
-    figure(results_noreg=results_noreg, results_l1=results_l1)
+        figure(title=title, results_noreg=results_noreg, results_l1=results_l1)

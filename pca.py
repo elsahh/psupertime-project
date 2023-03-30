@@ -17,8 +17,8 @@ FIGURE_PATH = PSUPERTIME_PATH / 'figures'
 
 def data():
     # paths to data
-    genes_path = PSUPERTIME_PATH / 'variable_genes.csv'
-    ages_path = PSUPERTIME_PATH / 'Ages.csv'
+    genes_path = PSUPERTIME_PATH / 'datasets' / 'variable_genes.csv'
+    ages_path = PSUPERTIME_PATH / 'datasets' / 'Ages.csv'
 
     # import data
     genes_df = pd.read_csv(genes_path, index_col=False, sep=',')

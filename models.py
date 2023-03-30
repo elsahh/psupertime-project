@@ -14,9 +14,8 @@ PSUPERTIME_PATH = Path(__file__).parent
 FIGURE_PATH = PSUPERTIME_PATH / 'figures'
 
 
-def data():
-    # paths to data
-    genes_path = PSUPERTIME_PATH / 'variable_genes.csv'
+def data(genes_path):
+    # path to ages
     ages_path = PSUPERTIME_PATH / 'Ages.csv'
 
     # import data
@@ -38,26 +37,26 @@ def data():
     return X, y
 
 
-def cross_validation_l1(X, y, alphas, n_folds):
-    # Kfolds splits
+def cross_validation_l1(X, y, olr_alphas, linear_alphas, n_folds):
+    # Kfolds splits, alphas
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
 
     results = []
-    for alpha in alphas:
+    for olr_alpha, linear_alpha in zip(olr_alphas, linear_alphas):
         # models
         models = {
-            "ordinall1": OrdinalClassifier(
+            "olrl1": OrdinalClassifier(
                 clf=LogisticRegression(
                     penalty='l1',
                     solver='liblinear',
                     max_iter=5000,
-                    C=1/alpha
+                    C=1/olr_alpha
                 )
             ),
 
             "linearl1": Lasso(
                 tol=0.01,
-                alpha=alpha
+                alpha=linear_alpha
             )
         }
 
@@ -84,7 +83,7 @@ def crossvalidation_noreg(X, y, n_folds):
     results = []
     # models
     models = {
-        "ordinal": OrdinalClassifier(
+        "olr": OrdinalClassifier(
             clf=LogisticRegression(
                 penalty=None,
                 solver='lbfgs',
@@ -99,7 +98,7 @@ def crossvalidation_noreg(X, y, n_folds):
         for i, (train_index, test_index) in enumerate(kf.split(X)):
             # fit model
             model.fit(X[train_index], y[train_index])
-            # predicted test data
+            # predict test data
             y_predicted = model.predict(X[test_index])
             # Kendall's Tau between predicted age and measured age
             ktau = kendalltau(y_predicted, y[test_index])
@@ -121,10 +120,10 @@ def figure(title, results_noreg, results_l1):
 
     linear_mean = noreg_means["KTau"]["linear"]
     linear_sd = noreg_sds["KTau"]["linear"]
-    ordinal_mean = noreg_means["KTau"]["ordinal"]
-    ordinal_sd = noreg_sds["KTau"]["ordinal"]
+    olr_mean = noreg_means["KTau"]["olr"]
+    olr_sd = noreg_sds["KTau"]["olr"]
 
-    f, (ax_linear, ax_ordlog) = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
+    f, (ax_linear, ax_olr) = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 
     # plot red reference values
     ax_linear.axhline(
@@ -142,16 +141,16 @@ def figure(title, results_noreg, results_l1):
         edgecolor=None
     )
 
-    ax_ordlog.axhline(
-        ordinal_mean,
+    ax_olr.axhline(
+        olr_mean,
         linestyle='--',
         color='red',
         label='No Regularization (Mean $\pm$ SD)'
     )
-    ax_ordlog.fill_between(
+    ax_olr.fill_between(
         x=(1e-10, 1),
-        y1=ordinal_mean + ordinal_sd,
-        y2=ordinal_mean - ordinal_sd,
+        y1=olr_mean + olr_sd,
+        y2=olr_mean - olr_sd,
         color="red",
         alpha=0.3,
         edgecolor=None
@@ -159,7 +158,7 @@ def figure(title, results_noreg, results_l1):
 
     # plot alpha scan
     print(results_l1)
-    for model, ax in zip(["ordinall1", "linearl1"], [ax_ordlog, ax_linear]):
+    for model, ax in zip(["olrl1", "linearl1"], [ax_olr, ax_linear]):
         results_model = results_l1[results_l1.Model == model]
         by_alpha = results_model.groupby("Alpha")
         means = by_alpha.mean().reset_index()
@@ -186,7 +185,10 @@ def figure(title, results_noreg, results_l1):
     x_min = min_alpha - min_alpha / 2
     x_max = max_alpha + max_alpha / 2
 
-    for ax in [ax_linear, ax_ordlog]:
+    ax_linear.set_title("Linear Model")
+    ax_olr.set_title("OLR Model")
+
+    for ax in [ax_linear, ax_olr]:
         ax.set_xscale('log')
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(0, 1)
@@ -198,31 +200,42 @@ def figure(title, results_noreg, results_l1):
 
 
 if __name__ == '__main__':
-
-    # get data
-    features, labels = data()
-
-    # params for cv
-    n_folds = 5
-    alphass = {
-        "Fig1": np.logspace(-7, -1, 10),
-        "Fig2": np.logspace(-5, -4, 10)
+    gene_paths = {
+        "500genes": PSUPERTIME_PATH / '500_variable_genes.csv',
+        "50genes": PSUPERTIME_PATH / '50_variable_genes.csv',
     }
 
-    for title, alphas in alphass.items():
-        # cv of l1 regularized models
-        results_l1 = cross_validation_l1(
-            X=features,
-            y=labels,
-            alphas=alphas,
-            n_folds=n_folds,
-        )
+    for dset_key, path in gene_paths.items():
+        # get data
+        features, labels = data(genes_path=path)
 
-        # cv of not-regularized models
-        results_noreg = crossvalidation_noreg(
-            X=features,
-            y=labels,
-            n_folds=n_folds,
-        )
+        # params for cv
+        n_folds = 2
+        n_alphas = 3
+        alphass = {
+            "olr": {
+                "Fig1": (-7, -1),
+                "Fig2": (-5, -4),
+            },
+            "linear": {
+                "Fig1": (-7, -1),
+                "Fig2": (-5, -4),
+            },
+        }
 
-        figure(title=title, results_noreg=results_noreg, results_l1=results_l1)
+        for title, alpha_limits in alphass.items():
+            # cv of l1 regularized models
+            results_l1 = cross_validation_l1(
+                X=features,
+                y=labels,
+                n_folds=n_folds,
+            )
+
+            # cv of not-regularized models
+            results_noreg = crossvalidation_noreg(
+                X=features,
+                y=labels,
+                n_folds=n_folds,
+            )
+
+            figure(title=title, results_noreg=results_noreg, results_l1=results_l1)

@@ -3,11 +3,7 @@ import numpy as np
 from pathlib import Path
 from matplotlib import pyplot as plt
 
-from sklearn.linear_model import LinearRegression, Lasso, LogisticRegression
-from sklearn.model_selection import train_test_split, KFold
-from scipy.stats import kendalltau
-
-from ordinal_classifier import OrdinalClassifier
+from sklearn.linear_model import LinearRegression, Lasso
 
 PSUPERTIME_PATH = Path(__file__).parent
 
@@ -15,6 +11,7 @@ FIGURE_PATH = PSUPERTIME_PATH / 'figures'
 
 
 def data(genes_path):
+    """Helper Function for data import and formatting."""
     # path to ages
     ages_path = PSUPERTIME_PATH / 'datasets' / 'Ages.csv'
 
@@ -39,6 +36,7 @@ def data(genes_path):
 
 
 def get_coeffs(X, y):
+    """Get all beta coefficients of linear and linear l1 models."""
     linearl1 = Lasso(
         tol=0.01,
         alpha=np.power(10, -4.9)
@@ -48,10 +46,13 @@ def get_coeffs(X, y):
     # fit models
     linearl1.fit(X, y)
     linear.fit(X, y)
+
+    # return betas
     return linear.coef_, linearl1.coef_
 
 
 def get_max_betas(genes, betas, n):
+    """Get the n maximal beta values and their corresponding genes"""
     abs_betas = np.abs(betas)
     max_beta_indices = np.argpartition(abs_betas, -n)[-n:]
     max_betas = betas[max_beta_indices]
@@ -61,7 +62,7 @@ def get_max_betas(genes, betas, n):
 
 
 if __name__ == '__main__':
-
+    # data path
     genes_path = PSUPERTIME_PATH / 'datasets' / '500_variable_genes.csv'
 
     # get data
@@ -70,6 +71,7 @@ if __name__ == '__main__':
     # get betas
     linear_betas, l1_betas = get_coeffs(X=features, y=labels)
 
+    # make histogram of all beta values for both models
     f, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 4))
     bins = np.linspace(-25000, 20000, 25)
     ax.hist(linear_betas, bins=bins, label="Linear model", alpha=1, linestyle="-", edgecolor='black')
@@ -89,9 +91,9 @@ if __name__ == '__main__':
     # how many zeros are in l1 betas
     print(len(np.where(l1_betas == 0.0)[0]))
 
+    # save results of most relevant genes
     for model, model_betas in betas.items():
         relevant_genes, max_betas = get_max_betas(genes=genes, betas=model_betas, n=50)
-        # save results
         df = pd.DataFrame({"Gene": relevant_genes, "Beta": max_betas}).sort_values(by="Beta")
         df.to_csv(
             PSUPERTIME_PATH / "results" / f"{model}_relevant_genes.tsv",

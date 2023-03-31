@@ -4,7 +4,7 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 
 from sklearn.linear_model import LinearRegression, Lasso, LogisticRegression
-from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection import KFold
 from scipy.stats import kendalltau
 
 from ordinal_classifier import OrdinalClassifier
@@ -15,6 +15,7 @@ FIGURE_PATH = PSUPERTIME_PATH / 'figures'
 
 
 def data(genes_path):
+    """Helper Function for data import and formatting."""
     # path to ages
     ages_path = PSUPERTIME_PATH / 'datasets' / 'Ages.csv'
 
@@ -31,16 +32,18 @@ def data(genes_path):
     joined_df = genes_df.join(ages_df)
     print('There are', joined_df.isna().sum().sum(), 'NaNs in the data')
 
-    # get Features X and targets y
+    # get Features X and labels y
     y = joined_df['Age'].to_numpy()
     X = joined_df.drop('Age', axis=1).to_numpy()
     return X, y
 
 
 def cross_validation_l1(X, y, olr_alphas, linear_alphas, n_folds):
-    # Kfolds splits, alphas
+    """Perform nFold Crossvalidation, over variable regularization strengths alpha"""
+    # Kfolds splits
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
 
+    # iterate over different alphas
     results = []
     for olr_alpha, linear_alpha in zip(olr_alphas, linear_alphas):
         # models
@@ -58,12 +61,13 @@ def cross_validation_l1(X, y, olr_alphas, linear_alphas, n_folds):
             alpha=linear_alpha
         )
 
+        # iterate over folds
         for i, (train_index, test_index) in enumerate(kf.split(X)):
             # fit models
             olrl1.fit(X[train_index], y[train_index])
             linearl1.fit(X[train_index], y[train_index])
 
-            # predicted test data
+            # predict test data
             y_predicted_olr = olrl1.predict(X[test_index])
             y_predicted_linear = linearl1.predict(X[test_index])
 
@@ -71,19 +75,21 @@ def cross_validation_l1(X, y, olr_alphas, linear_alphas, n_folds):
             ktau_olr = kendalltau(y_predicted_olr, y[test_index])
             ktau_linear = kendalltau(y_predicted_linear, y[test_index])
 
+            # save results to list
             results.append({'Model': "olrl1", 'Fold': i+1, 'Alpha': olr_alpha, 'KTau': ktau_olr[0]})
             results.append({'Model': "linearl1", 'Fold': i+1, 'Alpha': linear_alpha, 'KTau': ktau_linear[0]})
 
+    # list to pd.DataFrame
     results_df = pd.DataFrame(results, columns=['Model', 'Fold', 'Alpha', 'KTau'])
 
     return results_df
 
 
 def crossvalidation_noreg(X, y, n_folds):
+    """Perform nFold Crossvalidation for non-regularized models."""
     # Kfolds splits
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
 
-    results = []
     # models
     models = {
         "olr": OrdinalClassifier(
@@ -97,6 +103,8 @@ def crossvalidation_noreg(X, y, n_folds):
         "linear": LinearRegression()
     }
 
+    # iterate over models and folds
+    results = []
     for key, model in models.items():
         for i, (train_index, test_index) in enumerate(kf.split(X)):
             # fit model
@@ -106,24 +114,29 @@ def crossvalidation_noreg(X, y, n_folds):
             # Kendall's Tau between predicted age and measured age
             ktau = kendalltau(y_predicted, y[test_index])
 
+            # save results to list
             results.append({'Model': key, 'Fold': i + 1, 'KTau': ktau[0]})
 
+    # list to pd.DataFrame
     results_df = pd.DataFrame(results, columns=['Model', 'Fold', 'KTau'])
 
     return results_df
 
 
 def figure(filename, results_noreg, results_l1):
+    """Create Figure of alpha scans."""
     # mean, sd of noreg results
     noreg_by_model = results_noreg.groupby("Model")
     noreg_means = noreg_by_model.mean()
     noreg_sds = noreg_by_model.std()
 
+    # model-specific results
     linear_mean = noreg_means["KTau"]["linear"]
     linear_sd = noreg_sds["KTau"]["linear"]
     olr_mean = noreg_means["KTau"]["olr"]
     olr_sd = noreg_sds["KTau"]["olr"]
 
+    # figure
     f, (ax_linear, ax_olr) = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 
     # plot red reference values
@@ -184,33 +197,41 @@ def figure(filename, results_noreg, results_l1):
         x_min = min_alpha - min_alpha / 2
         x_max = max_alpha + max_alpha / 2
 
+        # set axis limits
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(0, 1)
 
+        # set xaxis to log-scale
         ax.set_xscale('log')
 
+    # set titles
     ax_linear.set_title("Linear Model")
     ax_olr.set_title("OLR Model")
 
+    # axis labels, legend
     for ax in [ax_linear, ax_olr]:
         ax.set_ylabel("Kendall's Tau [-]")
         ax.set_xlabel('alpha [-]')
         ax.legend()
+
+    # save, show figure
     plt.savefig(PSUPERTIME_PATH / 'figures' / f"{filename}.svg", dpi=300)
     plt.show()
 
 
 if __name__ == '__main__':
+    # paths to datasets
     gene_paths = {
         "500genes": PSUPERTIME_PATH / 'datasets' / '500_variable_genes.csv',
         "50genes": PSUPERTIME_PATH / 'datasets' / '50_variable_genes.csv',
     }
 
+    # iterate over datasets
     for dset_key, path in gene_paths.items():
         # get data
         features, labels = data(genes_path=path)
 
-        # params for cv
+        # parameters for Crossvalidation and alpha-scan
         n_folds = 5
         n_alphas = 8
         alphass = {
@@ -241,6 +262,7 @@ if __name__ == '__main__':
                 n_folds=n_folds,
             )
 
+            # create figure
             figure(
                 filename=f"Fig_{dset_key}_{resolution}",
                 results_noreg=results_noreg,

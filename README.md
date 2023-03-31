@@ -1,32 +1,6 @@
 # psupertime-project
-Project for completion of the module "Systems Biology: Computational Analysis and Interpretation of High-throughput Data"
 
-## TODO
-- Preprocessing:
-  + log transform
-  + row normalization
-  + 400 most variable genes
-  
-- linear model
-  + sklearn linear_model.LinearRegression()
-  + normal and L1regularized
-  + calculate kendall's tau
-  
-- ordinal logistic regression
-  
-- make figure
-
-- write paper
-
-## Ideas
-- Differences between categorical and continuous timelabels.
-  + pros & cons
-  + it seems for pseudotime, or time in general, categorizing doesn't make any sense
-- Logistic vs Linear: Linear model forces linearity on data, logistic is more flexible??
-- discuss unique solutions
-- Our code, specifically how we do ordinal logistic regression
-- complain about R package installation
-- differences between our code and the actual psupertime code
-
-## Figures
-- 
+## Description
+To recreate the figures from the manuscript, run the models.py and the pca.py scripts.
+The raw data is not a part of this repository, so the ipython-notebooks raw_data.ipynb and data.ipynb do not work, unless you have the raw data.
+Our preprocessed datasets can be found in the datasets directory. Our preprocessing pipeline is explained in detail in the manuscript.

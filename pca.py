@@ -17,7 +17,7 @@ FIGURE_PATH = PSUPERTIME_PATH / 'figures'
 
 def data():
     # paths to data
-    genes_path = PSUPERTIME_PATH / 'datasets' / 'variable_genes.csv'
+    genes_path = PSUPERTIME_PATH / 'datasets' / '500_variable_genes.csv'
     ages_path = PSUPERTIME_PATH / 'datasets' / 'Ages.csv'
 
     # import data
@@ -53,7 +53,7 @@ def predictions(X, y):
 
         "linearl1": Lasso(
             tol=0.01,
-            alpha=np.power(10, -4.8)
+            alpha=np.power(10, -4.9)
         ),
 
         "ordinal": OrdinalClassifier(
@@ -69,14 +69,12 @@ def predictions(X, y):
 
     ages = [1, 5, 6, 21, 22, 38, 44, 54]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
     results = pd.DataFrame()
     for key, model in models.items():
         # fit model
-        model.fit(X_train, y_train)
+        model.fit(X, y)
         # predicted test data
-        y_predicted = model.predict(X_test)
+        y_predicted = model.predict(X)
         if key.startswith("ordinal"):
             ages_from_label = []
             for label in y_predicted:
@@ -86,7 +84,7 @@ def predictions(X, y):
         results[key] = y_predicted
     print(results)
 
-    return X_test, results
+    return results
 
 
 if __name__ == '__main__':
@@ -94,46 +92,40 @@ if __name__ == '__main__':
     # get data
     features, labels = data()
 
-    X_test, results = predictions(X=features, y=labels)
+    # predict timelables
+    results = predictions(X=features, y=labels)
 
-    titles = {
-        "ordinall1": "OLR L1",
-        "linearl1": "Linear L1",
-        "ordinal": "OLR",
-        "linear": "Linear"
-    }
+    # PCA
+    pca = PCA(n_components=2)
+    pca.fit(features)
 
-    pca = PCA(n_components=5)
-    pca.fit(X_test)
-
+    # explained variance of principal components
     evr = pca.explained_variance_ratio_
     print(evr)
 
-    components = pca.transform(X_test).T
+    # calculate components for all samples
+    components = pca.transform(features).T
 
-    results["pca1"] = components[0]
-    results["pca2"] = components[1]
+    results["pc1"] = components[0]
+    results["pc2"] = components[1]
 
-    results = results[(results["linear"] >= -20) & (results["linear"] <= 65)]
-
-    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2, figsize=(9, 9), sharex='all', sharey='all')
-    print(components[0].shape)
-    for model, ax in zip(titles.keys(), [ax1, ax2, ax3, ax4]):
-        ax.scatter(
-            x=results["pca2"],
-            y=results["pca1"],
-            c=results[model],
-            alpha=0.7,
-            cmap="autumn",
-            # edgecolors='black',
+    # create figure
+    f, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+    sc = ax.scatter(
+            x=results["pc2"],
+            y=results["pc1"],
+            c=labels,
+            alpha=0.4,
+            cmap="rainbow",
             linewidths=0.4,
-            s=14,
-        )
-        ax.set_title(titles[model], weight='bold')
+            s=12,
+    )
+    cbar = f.colorbar(sc, ax=ax, label='Age [yr]')
 
-        ax.set_xlabel(f"PC 2 ({evr[1].round(2) * 100}%)")
-        ax.set_ylabel(f"PC 1 ({evr[0].round(2) * 100}%)")
+    ax.set_xlabel(f"PC 2 ({evr[1].round(2) * 100}%)")
+    ax.set_ylabel(f"PC 1 ({evr[0].round(2) * 100}%)")
 
-        ax.set_xlim(-0.005, 0.008)
-        ax.set_ylim(-0.005, 0.013)
+    ax.set_xlim(-0.0065, 0.008)
+    ax.set_ylim(-0.005, 0.013)
+    f.savefig(PSUPERTIME_PATH / "figures" / "pca.svg")
     plt.show()

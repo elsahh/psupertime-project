@@ -15,6 +15,7 @@ class OrdinalClassifier(BaseEstimator, ClassifierMixin):
         self.uniques_class = None
 
     def fit(self, X, y):
+        """Fit the ordinal classifier. """
         self.uniques_class = np.sort(np.unique(y))
         assert self.uniques_class.shape[
                    0] >= 3, f'OrdinalClassifier needs at least 3 classes, only {self.uniques_class.shape[0]} found'
@@ -27,9 +28,11 @@ class OrdinalClassifier(BaseEstimator, ClassifierMixin):
             self.clfs[i] = clf
 
     def predict(self, X):
+        """Predict a new set of samples."""
         return np.argmax(self.predict_proba(X), axis=1)
 
     def predict_proba(self, X):
+        """Calculate the probabilities of set of samples for each class"""
         predicted = [self.clfs[k].predict_proba(X)[:, 1].reshape(-1, 1) for k in self.clfs]
 
         p_x_first = 1 - predicted[0]
